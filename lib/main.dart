@@ -44,7 +44,9 @@ class _MainLayoutState extends State<MainLayout> {
   final yt.YoutubeExplode _yt = yt.YoutubeExplode();
 
   Future<void> _startPlayback(String videoId, String title, String author) async {
-    _videoController?.dispose();
+    if (_videoController != null) {
+      await _videoController!.dispose();
+    }
     
     setState(() {
       _isLoadingPlayer = true;
@@ -54,9 +56,8 @@ class _MainLayoutState extends State<MainLayout> {
     });
 
     try {
-      // YouTube එකෙන් සැබෑ වීඩියෝ ලින්ක් එක ලබා ගැනීම
-      var manifest = await _yt.videos.streamsClient.getManifest(videoId);
-      var streamInfo = manifest.muxed.withHighestBitrate();
+      var map = await _yt.videos.streamsClient.getManifest(videoId);
+      var streamInfo = map.muxed.withHighestBitrate();
       
       _videoController = VideoPlayerController.networkUrl(streamInfo.url)
         ..initialize().then((_) {
@@ -103,7 +104,6 @@ class _MainLayoutState extends State<MainLayout> {
       ),
       body: Column(
         children: [
-          // Native Video Player Implementation
           if (_isVideoPlaying)
             Container(
               color: const Color(0xFF1A1A1A),
@@ -136,6 +136,19 @@ class _MainLayoutState extends State<MainLayout> {
                             ],
                           ),
                         ),
+                        if (!_isLoadingPlayer && _videoController != null)
+                          IconButton(
+                            icon: Icon(_videoController!.value.isPlaying ? Icons.pause : Icons.play_arrow),
+                            onPressed: () {
+                              setState(() {
+                                if (_videoController!.value.isPlaying) {
+                                  _videoController!.pause();
+                                } else {
+                                  _videoController!.play();
+                                }
+                              });
+                            },
+                          ),
                         IconButton(
                           icon: const Icon(Icons.close),
                           onPressed: () {
@@ -261,12 +274,3 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
                       ),
                       Padding(
                         padding: const EdgeInsets.all(12.0),
-                        child: Row(
-                          children: [
-                            const CircleAvatar(backgroundColor: Colors.grey, radius: 18, child: Icon(Icons.music_note)),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(video.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
