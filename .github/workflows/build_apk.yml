@@ -10,42 +10,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. GitHub එකේ දැනට තියෙන ඔයාගේ පිරිසිදු කෝඩ් එක කෙලින්ම සර්වර් එකට ගැනීම
       - name: Checkout Source Code
         uses: actions/checkout@v4
-        with:
-          path: 'temp_src'
 
+      # 2. Java පද්ධතිය සකසා ගැනීම
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
+      # 3. Flutter මෘදුකාංගය සර්වර් එකට දැමීම
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
-      - name: Create Base Flutter Template
+      # 4. Android Template එක සාර්ථකව සෑදීම
+      - name: Create Base Android Structure
         run: |
-          flutter create --org com.garmex.ytclone --project-name youtube_premium_clone .
+          flutter create --org com.garmex.ytclone --project-name youtube_premium_clone . --force
 
-      - name: Apply Custom Code
-        run: |
-          cp -f temp_src/pubspec.yaml ./pubspec.yaml
-          cp -f temp_src/lib/main.dart ./lib/main.dart
-
+      # 5. පැකේජ් ඉන්ස්ටෝල් කිරීම
       - name: Install dependencies
         run: flutter pub get
 
-      # Google හි නවතම Android පද්ධති නීති නිසා සිදුවන බිඳවැටීම ස්වයංක්‍රීයව නිවැරදි කිරීමේ පියවර
-      - name: Fix Android Proguard Issue
-        run: |
-          find ~/.pub-cache/ -name "build.gradle" -exec sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" {} +
-
+      # 6. APK එක නිපදවීම
       - name: Build APK
         run: flutter build apk --release
 
+      # 7. සෑදූ APK එක ඩවුන්ලෝඩ් කිරීමට ලබා දීම
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
