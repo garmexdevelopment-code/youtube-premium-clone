@@ -10,7 +10,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Create Base Flutter Template
+        run: |
+          # 1. මුලින්ම ඇප් එක Build කිරීමට අවශ්‍ය මූලික Android ෆයිල්ස් ඔටෝ සාදා ගැනීම
+          flutter create --org com.garmex.ytclone --project-name youtube_premium_clone . --force
+
+      - name: Checkout Code Override
+        uses: actions/checkout@v4
+        with:
+          path: 'temp_src'
+
+      - name: Copy Custom Code Over Template
+        run: |
+          # 2. ඔබ සෑදූ main.dart සහ pubspec.yaml ෆයිල්ස් නිවැරදි තැන්වලට කොපි කිරීම
+          cp -f temp_src/pubspec.yaml ./pubspec.yaml
+          cp -f temp_src/lib/main.dart ./lib/main.dart
 
       - name: Set up Java
         uses: actions/setup-java@v4
