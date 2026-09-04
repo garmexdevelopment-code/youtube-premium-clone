@@ -30,7 +30,6 @@ jobs:
         run: |
           flutter create --org com.garmex.ytclone --project-name youtube_premium_clone .
 
-      # සර්වර් එක ඇතුළෙන්ම පැකේජ් 2ක බලෙන්ම ඇතුළත් කිරීම (pubspec ලෙඩ සදහටම ඉවරයි)
       - name: Force Inject Latest Stable Packages
         run: |
           flutter pub add youtube_explode_dart
@@ -39,8 +38,15 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Fix Android Proguard Issue
+      # Kotlin Version එක අලුත්ම 1.9.20 එකට ඔටෝම මාරු කර ගැළපීම් ප්‍රශ්න විසඳීමේ පියවර
+      - name: Upgrade Kotlin and Fix Proguard Issues
         run: |
+          # 1. settings.gradle එක ඇතුළේ තියෙන පරණ Kotlin අනුවාදය 1.9.20 වලට මාරු කිරීම
+          if [ -f android/settings.gradle ]; then
+            sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.20"/g' android/settings.gradle
+          fi
+          
+          # 2. පරණ Proguard ගැටලුව සම්පූර්ණයෙන්ම මකා දැමීම
           if [ -f android/app/build.gradle ]; then
             sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" android/app/build.gradle
           fi
