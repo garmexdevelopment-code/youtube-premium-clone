@@ -40,6 +40,7 @@ class _MainLayoutState extends State<MainLayout> {
   String _currentVideoTitle = '';
   String _currentChannel = '';
 
+  // FIX: one shared instance instead of creating a new one in every screen.
   final yt.YoutubeExplode _yt = yt.YoutubeExplode();
 
   Future<void> _startPlayback(String videoId, String title, String author) async {
@@ -59,6 +60,7 @@ class _MainLayoutState extends State<MainLayout> {
       var manifest = await _yt.videos.streamsClient.getManifest(videoId);
       final muxedStreams = manifest.muxed.toList();
 
+      // FIX: some videos have no muxed (audio+video) stream -> was crashing before.
       if (muxedStreams.isEmpty) {
         throw Exception('No playable stream found for this video');
       }
@@ -70,6 +72,7 @@ class _MainLayoutState extends State<MainLayout> {
 
       await controller.initialize();
 
+      // FIX: mounted check after the async gap, avoids setState-after-dispose crash.
       if (!mounted) return;
       setState(() {
         _isLoadingPlayer = false;
@@ -269,6 +272,7 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
 
   @override
   void dispose() {
+    // NOTE: _ytExplode is now owned by MainLayout, so it is NOT closed here.
     _searchController.dispose();
     super.dispose();
   }
