@@ -40,7 +40,6 @@ class MainLayout extends StatefulWidget {
 class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
   
-  // Real Players
   YoutubePlayerController? _videoController;
   final AudioPlayer _audioPlayer = AudioPlayer();
   
@@ -50,7 +49,6 @@ class _MainLayoutState extends State<MainLayout> {
   String _currentVideoTitle = 'Loading...';
   String _currentChannel = '';
   
-  // Login State
   bool _isLoggedIn = false;
   String _userEmail = '';
 
@@ -74,7 +72,6 @@ class _MainLayoutState extends State<MainLayout> {
     });
   }
 
-  // YMusic Core Feature: Background Audio-Only Play
   Future<void> _switchToAudioOnly() async {
     if (_currentVideoId.isEmpty) return;
     
@@ -98,7 +95,6 @@ class _MainLayoutState extends State<MainLayout> {
     }
   }
 
-  // YMusic Core Feature: High Quality MP3 Download Tool
   Future<void> _downloadMP3() async {
     if (_currentVideoId.isEmpty) return;
 
@@ -131,7 +127,6 @@ class _MainLayoutState extends State<MainLayout> {
     }
   }
 
-  // Gmail Login Logic Interface
   void _showLoginDialog() {
     TextEditingController emailController = TextEditingController();
     TextEditingController passwordController = TextEditingController();
@@ -227,7 +222,7 @@ class _MainLayoutState extends State<MainLayout> {
               child: CircleAvatar(
                 backgroundColor: _isLoggedIn ? Colors.green : Colors.blueAccent,
                 radius: 15,
-                child: Text(_isLoggedIn ? _userEmail[0].toUpperCase() : 'L', style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                child: Text(_isLoggedIn ? _userEmail.substring(0, 1).toUpperCase() : 'L', style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
               ),
             ),
           ),
@@ -235,7 +230,6 @@ class _MainLayoutState extends State<MainLayout> {
       ),
       body: Column(
         children: [
-          // Active Real Media Output Dynamic View panel
           if (_isVideoPlaying)
             Container(
               color: const Color(0xFF1A1A1A),
@@ -263,3 +257,4 @@ class _MainLayoutState extends State<MainLayout> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              Text(_currentVideoTitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
