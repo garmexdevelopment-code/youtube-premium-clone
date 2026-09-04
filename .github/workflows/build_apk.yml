@@ -28,7 +28,8 @@ jobs:
 
       - name: Create Base Flutter Template
         run: |
-          flutter create --org com.garmex.ytclone --project-name youtube_premium_clone . --force
+          # මෙතැනින් --force ඉවත් කර සකස් කර ඇත
+          flutter create --org com.garmex.ytclone --project-name youtube_premium_clone .
 
       - name: Apply Custom Code
         run: |
