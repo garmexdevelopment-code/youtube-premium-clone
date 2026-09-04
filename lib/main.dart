@@ -86,11 +86,11 @@ class _MainLayoutState extends State<MainLayout> {
       await _audioPlayer.setUrl(audioStream.url.toString());
       _audioPlayer.play();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Background Audio Mode Active! You can lock phone.')),
+        const SnackBar(content: Text('Background Audio Active! You can lock phone.')),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Audio Stream Error! Trying again.')),
+        const SnackBar(content: Text('Audio stream error. trying again.')),
       );
     }
   }
@@ -104,7 +104,7 @@ class _MainLayoutState extends State<MainLayout> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Downloading MP3 File... Please wait.')),
+      const SnackBar(content: Text('Downloading MP3... Please wait.')),
     );
 
     try {
@@ -118,11 +118,11 @@ class _MainLayoutState extends State<MainLayout> {
       await Dio().download(audioStream.url.toString(), path);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Downloaded successfully to: $path')),
+        SnackBar(content: Text('Saved to: $path')),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Download failed or permission denied.')),
+        const SnackBar(content: Text('Download failed.')),
       );
     }
   }
@@ -135,11 +135,11 @@ class _MainLayoutState extends State<MainLayout> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF212121),
-        title: Row(
+        title: const Row(
           children: [
-            Image.network('https://wikimedia.org', height: 24, width: 24, errorBuilder: (c, e, s) => const Icon(Icons.account_circle)),
-            const SizedBox(width: 10),
-            const Text('Sign in with Google', style: TextStyle(color: Colors.white, fontSize: 18)),
+            Icon(Icons.account_circle, color: Colors.blueAccent),
+            SizedBox(width: 10),
+            Text('Sign in with Google', style: TextStyle(color: Colors.white, fontSize: 18)),
           ],
         ),
         content: Column(
@@ -147,13 +147,13 @@ class _MainLayoutState extends State<MainLayout> {
           children: [
             TextField(
               controller: emailController,
-              decoration: const InputDecoration(hintText: 'Enter your Gmail account', labelText: 'Email Address'),
+              decoration: const InputDecoration(hintText: 'Enter your Gmail', labelText: 'Email Address'),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: passwordController,
               obscureText: true,
-              decoration: const InputDecoration(hintText: 'Enter account password', labelText: 'Password'),
+              decoration: const InputDecoration(hintText: 'Enter password', labelText: 'Password'),
             ),
           ],
         ),
@@ -170,7 +170,7 @@ class _MainLayoutState extends State<MainLayout> {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Welcome, $_userEmail')));
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid Gmail address.')));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter a valid Gmail.')));
               }
             },
             child: const Text('Sign In', style: TextStyle(color: Colors.white)),
@@ -258,3 +258,7 @@ class _MainLayoutState extends State<MainLayout> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(_currentVideoTitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              Text(_currentChannel, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                            ],
+                          ),
+                        ),
