@@ -34,13 +34,11 @@ class MainLayout extends StatefulWidget {
 
 class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
-  
   VideoPlayerController? _videoController;
   bool _isVideoPlaying = false;
   bool _isLoadingPlayer = false;
   String _currentVideoTitle = '';
   String _currentChannel = '';
-  
   final yt.YoutubeExplode _yt = yt.YoutubeExplode();
 
   Future<void> _startPlayback(String videoId, String title, String author) async {
@@ -68,9 +66,11 @@ class _MainLayoutState extends State<MainLayout> {
         });
     } catch (e) {
       setState(() => _isLoadingPlayer = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Playback Error! Please try another video.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Playback Error! Please try another video.')),
+        );
+      }
     }
   }
 
@@ -203,15 +203,18 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
   }
 
   Future<void> _loadInitialVideos() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       var searchResult = await _ytExplode.search.search('Sinhala new songs');
-      setState(() {
-        _searchedVideos = searchResult.take(10).toList();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _searchedVideos = searchResult.take(10).toList();
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -220,12 +223,14 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
     setState(() => _isLoading = true);
     try {
       var searchResult = await _ytExplode.search.search(query);
-      setState(() {
-        _searchedVideos = searchResult.take(15).toList();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _searchedVideos = searchResult.take(15).toList();
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -270,7 +275,3 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
                         height: 180,
                         width: double.infinity,
                         color: const Color(0xFF222222),
-                        child: Image.network(video.thumbnails.mediumResUrl, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const Icon(Icons.play_arrow, size: 50)),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(12.0),
