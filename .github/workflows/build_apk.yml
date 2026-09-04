@@ -10,46 +10,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. කේතයන් තාවකාලිකව වෙනත් තැනකට ගැනීම
-       bondage:
       - name: Checkout Source Code
         uses: actions/checkout@v4
         with:
           path: 'temp_src'
 
-      # 2. Java පරිසරය සකසා ගැනීම
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      # 3. මුලින්ම Flutter මෘදුකාංගය සර්වර් එකට ස්ථාපනය කිරීම
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
-      # 4. දැන් Flutter ඇති බැවින් මූලික Android ව්‍යුහය සාර්ථකව සෑදීම
       - name: Create Base Flutter Template
         run: |
           flutter create --org com.garmex.ytclone --project-name youtube_premium_clone . --force
 
-      # 5. ඔබ ලියූ main.dart සහ pubspec.yaml අලුත් ටෙම්ප්ලේට් එක මතට කොපි කිරීම
       - name: Apply Custom Code
         run: |
           cp -f temp_src/pubspec.yaml ./pubspec.yaml
           cp -f temp_src/lib/main.dart ./lib/main.dart
 
-      # 6. පැකේජ් ස්ථාපනය කිරීම
       - name: Install dependencies
         run: flutter pub get
 
-      # 7. APK එක නිපදවීම
       - name: Build APK
         run: flutter build apk --release
 
-      # 8. සෑදූ APK එක ඩවුන්ලෝඩ් කිරීමට ලබා දීම
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
