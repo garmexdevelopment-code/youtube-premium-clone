@@ -1,5 +1,5 @@
 name: youtube_premium_clone
-description: A new Flutter project.
+description: A working YouTube audio/video player app.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,6 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # සැබෑ YouTube දත්ත සහ ලින්ක් ලබා ගැනීමට මෙම පැකේජ් 2 එකතු කර ඇත
+  youtube_explode_dart: ^2.2.0
+  youtube_player_flutter: ^9.1.1
 
 dev_dependencies:
   flutter_test:
