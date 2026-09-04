@@ -1,5 +1,5 @@
 name: youtube_premium_clone
-description: Fixed YouTube Premium Clone App.
+description: Final YouTube Premium Clone App with 2026 YouTube Cipher Bypass.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,8 +9,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  youtube_explode_dart: ^2.2.2
-  video_player: ^2.8.2
+  # YouTube හි අලුත්ම ආරක්ෂක කේතයන් බිඳ දැමීමට පැකේජ් එක අලුත් කර ඇත
+  youtube_explode_dart: ^2.4.1
+  youtube_player_flutter: ^9.1.1
+  just_audio: ^0.9.36
+  path_provider: ^2.1.1
+  dio: ^5.4.0
+  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:
