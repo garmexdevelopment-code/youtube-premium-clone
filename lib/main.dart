@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:youtube_explode_dart/youtube_explode_dart.dart' as yt;
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 void main() => runApp(const YouTubePremiumClone());
 
@@ -32,22 +34,43 @@ class MainLayout extends StatefulWidget {
 
 class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
+  
+  // Real Video Player State
+  YoutubePlayerController? _videoController;
   bool _isVideoPlaying = false;
-  String _currentVideoTitle = '';
+  String _currentVideoTitle = 'Loading...';
   String _currentChannel = '';
 
-  void _playVideo(Map<String, String> video) {
+  void _startPlayback(String videoId, String title, String author) {
+    if (_videoController != null) {
+      _videoController!.dispose();
+    }
+
     setState(() {
       _isVideoPlaying = true;
-      _currentVideoTitle = video['title']!;
-      _currentChannel = video['channel']!;
+      _currentVideoTitle = title;
+      _currentChannel = author;
+      _videoController = YoutubePlayerController(
+        initialVideoId: videoId,
+        flags: const YoutubePlayerFlags(
+          autoPlay: true,
+          mute: false,
+          enableCaption: false,
+        ),
+      );
     });
+  }
+
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> screens = [
-      YouTubeHomeScreen(onVideoSelect: _playVideo),
+      YouTubeHomeScreen(onVideoSelect: _startPlayback),
       const Center(child: Text('Shorts Screen', style: TextStyle(color: Colors.white, fontSize: 18))),
       const Center(child: Text('Subscriptions Screen', style: TextStyle(color: Colors.white, fontSize: 18))),
       const Center(child: Text('You (Library) Screen', style: TextStyle(color: Colors.white, fontSize: 18))),
@@ -65,37 +88,46 @@ class _MainLayoutState extends State<MainLayout> {
             ),
           ],
         ),
-        actions: [
-          IconButton(icon: const Icon(Icons.cast), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.notifications_none), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-          const Padding(
-            padding: EdgeInsets.only(right: 12.0, left: 6.0),
-            child: CircleAvatar(backgroundColor: Colors.blueAccent, radius: 14, child: Text('N')),
-          ),
-        ],
       ),
       body: Column(
         children: [
-          if (_isVideoPlaying)
+          // Active Real Video Player View Component
+          if (_isVideoPlaying && _videoController != null)
             Container(
               color: const Color(0xFF1A1A1A),
-              padding: const EdgeInsets.all(12.0),
-              child: Row(
+              child: Column(
                 children: [
-                  Container(width: 100, height: 60, color: Colors.grey, child: const Icon(Icons.play_arrow)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  YoutubePlayer(
+                    controller: _videoController!,
+                    showVideoProgressIndicator: true,
+                    progressIndicatorColor: Colors.red,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(_currentVideoTitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        Text(_currentChannel, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(_currentVideoTitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              Text(_currentChannel, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () {
+                            setState(() {
+                              _isVideoPlaying = false;
+                              _videoController?.pause();
+                            });
+                          },
+                        ),
                       ],
                     ),
                   ),
-                  IconButton(icon: const Icon(Icons.pause), onPressed: () {}),
-                  IconButton(icon: const Icon(Icons.close), onPressed: () => setState(() => _isVideoPlaying = false)),
                 ],
               ),
             ),
@@ -117,50 +149,126 @@ class _MainLayoutState extends State<MainLayout> {
   }
 }
 
-class YouTubeHomeScreen extends StatelessWidget {
-  final Function(Map<String, String>) onVideoSelect;
+class YouTubeHomeScreen extends StatefulWidget {
+  final Function(String, String, String) onVideoSelect;
   const YouTubeHomeScreen({super.key, required this.onVideoSelect});
 
   @override
-  Widget build(BuildContext context) {
-    final List<Map<String, String>> dummyVideos = [
-      {'title': 'Build a YouTube Clone App in Flutter', 'channel': 'Tech Code LK', 'duration': '14:20'},
-      {'title': 'Amazing Sri Lankan Travel Vlog 2026', 'channel': 'Lanka Explorer', 'duration': '22:05'},
-      {'title': 'New Nonstop Remix Songs Collection', 'channel': 'Music Box', 'duration': '1:05:40'},
-    ];
-
-    return ListView.builder(
-      itemCount: dummyVideos.length,
-      itemBuilder: (context, index) {
-        final video = dummyVideos[index];
-        return InkWell(
-          onTap: () => onVideoSelect(video),
-          child: Column(
-            children: [
-              Container(height: 200, color: Colors.grey, child: const Center(child: Icon(Icons.play_arrow, size: 50, color: Colors.white54))),
-              Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const CircleAvatar(backgroundColor: Colors.grey, radius: 18, child: Icon(Icons.person)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(video['title']!, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15)),
-                          Text(video['channel']!, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  State<YouTubeHomeScreen> createState() => _YouTubeHomeScreenState();
 }
+
+class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  final yt.YoutubeExplode _ytExplode = yt.YoutubeExplode();
+  List<yt.Video> _searchedVideos = [];
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTrendingVideos(); // මුලින්ම Trending සින්දු ලෝඩ් කිරීම
+  }
+
+  Future<void> _loadTrendingVideos() async {
+    setState(() => _isLoading = true);
+    try {
+      // YouTube එකෙන් දැනට තියෙන ජනප්‍රිය වීඩියෝ ලබා ගැනීම
+      var playlist = await _ytExplode.playlists.get('PLFgquLnL59alCl_2vO84rXZlOGLIO8TWM');
+      List<yt.Video> videos = [];
+      await for (var video in _ytExplode.playlists.getVideos(playlist.id).take(10)) {
+        videos.add(video);
+      }
+      setState(() {
+        _searchedVideos = videos;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _searchYouTube(String query) async {
+    if (query.isEmpty) return;
+    setState(() => _isLoading = true);
+    try {
+      // ඔබ සර්ච් කරන ඕනෑම සින්දුවක් YouTube එකෙන් සෙවීම
+      var searchResult = await _ytExplode.search.search(query);
+      setState(() {
+        _searchedVideos = searchResult.take(15).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _ytExplode.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Symmetrical Real Search Bar Setup Integration
+        Padding(
+          padding: const EdgeInsets.all(10.0),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search YouTube Music...',
+              prefixIcon: const Icon(Icons.search, color: Colors.grey),
+              filled: true,
+              fillColor: const Color(0xFF272727),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(vertical: 0),
+            ),
+            onSubmitted: _searchYouTube,
+          ),
+        ),
+        
+        if (_isLoading)
+          const Expanded(child: Center(child: CircularProgressIndicator(color: Colors.red))),
+          
+        if (!_isLoading)
+          Expanded(
+            child: ListView.builder(
+              itemCount: _searchedVideos.length,
+              itemBuilder: (context, index) {
+                final video = _searchedVideos[index];
+                return InkWell(
+                  onTap: () => widget.onVideoSelect(video.id.value, video.title, video.author),
+                  child: Column(
+                    children: [
+                      // Video Thumbnail Placeholder Container box design layout
+                      Container(
+                        height: 180,
+                        width: double.infinity,
+                        color: const Color(0xFF222222),
+                        child: Image.network(
+                          video.thumbnails.mediumResUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.play_arrow, size: 50),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const CircleAvatar(backgroundColor: Colors.grey, radius: 18, child: Icon(Icons.music_note)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(video.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                  Text('${video.author} • ${video.duration ?? "Live"}', style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
