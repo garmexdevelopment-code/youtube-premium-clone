@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. GitHub එකේ දැනට තියෙන ඔයාගේ පිරිසිදු කෝඩ් එක කෙලින්ම සර්වර් එකට ගැනීම
+      # 1. GitHub එකේ තියෙන ඔයාගේ පිරිසිදු කෝඩ් එක සර්වර් එකට ගැනීම
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
@@ -27,10 +27,10 @@ jobs:
         with:
           channel: 'stable'
 
-      # 4. Android Template එක සාර්ථකව සෑදීම
+      # 4. Android Template එක සාර්ථකව සෑදීම (මෙතැනින් --force ඉවත් කර ඇත)
       - name: Create Base Android Structure
         run: |
-          flutter create --org com.garmex.ytclone --project-name youtube_premium_clone . --force
+          flutter create --org com.garmex.ytclone --project-name youtube_premium_clone .
 
       # 5. පැකේජ් ඉන්ස්ටෝල් කිරීම
       - name: Install dependencies
