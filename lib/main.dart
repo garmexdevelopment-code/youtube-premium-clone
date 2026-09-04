@@ -34,8 +34,6 @@ class MainLayout extends StatefulWidget {
 
 class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
-  
-  // Real Video Player State
   YoutubePlayerController? _videoController;
   bool _isVideoPlaying = false;
   String _currentVideoTitle = 'Loading...';
@@ -91,7 +89,6 @@ class _MainLayoutState extends State<MainLayout> {
       ),
       body: Column(
         children: [
-          // Active Real Video Player View Component
           if (_isVideoPlaying && _videoController != null)
             Container(
               color: const Color(0xFF1A1A1A),
@@ -166,20 +163,15 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadTrendingVideos(); // මුලින්ම Trending සින්දු ලෝඩ් කිරීම
+    _loadTrendingVideos();
   }
 
   Future<void> _loadTrendingVideos() async {
     setState(() => _isLoading = true);
     try {
-      // YouTube එකෙන් දැනට තියෙන ජනප්‍රිය වීඩියෝ ලබා ගැනීම
-      var playlist = await _ytExplode.playlists.get('PLFgquLnL59alCl_2vO84rXZlOGLIO8TWM');
-      List<yt.Video> videos = [];
-      await for (var video in _ytExplode.playlists.getVideos(playlist.id).take(10)) {
-        videos.add(video);
-      }
+      var searchResult = await _ytExplode.search.search('Sinhala new songs 2026');
       setState(() {
-        _searchedVideos = videos;
+        _searchedVideos = searchResult.take(10).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -191,7 +183,6 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
     if (query.isEmpty) return;
     setState(() => _isLoading = true);
     try {
-      // ඔබ සර්ච් කරන ඕනෑම සින්දුවක් YouTube එකෙන් සෙවීම
       var searchResult = await _ytExplode.search.search(query);
       setState(() {
         _searchedVideos = searchResult.take(15).toList();
@@ -213,7 +204,6 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Symmetrical Real Search Bar Setup Integration
         Padding(
           padding: const EdgeInsets.all(10.0),
           child: TextField(
@@ -229,10 +219,8 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
             onSubmitted: _searchYouTube,
           ),
         ),
-        
         if (_isLoading)
           const Expanded(child: Center(child: CircularProgressIndicator(color: Colors.red))),
-          
         if (!_isLoading)
           Expanded(
             child: ListView.builder(
@@ -243,7 +231,6 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
                   onTap: () => widget.onVideoSelect(video.id.value, video.title, video.author),
                   child: Column(
                     children: [
-                      // Video Thumbnail Placeholder Container box design layout
                       Container(
                         height: 180,
                         width: double.infinity,
@@ -272,3 +259,14 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
                             ),
                           ],
                         ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
