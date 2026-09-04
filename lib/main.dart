@@ -276,4 +276,3 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
                         height: 180,
                         width: double.infinity,
                         color: const Color(0xFF222222),
-
