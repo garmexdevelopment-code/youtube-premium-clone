@@ -220,6 +220,7 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
 
   Future<void> _searchYouTube(String query) async {
     if (query.isEmpty) return;
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       var searchResult = await _ytExplode.search.search(query);
