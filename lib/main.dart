@@ -39,13 +39,16 @@ class _MainLayoutState extends State<MainLayout> {
   bool _isLoadingPlayer = false;
   String _currentVideoTitle = '';
   String _currentChannel = '';
+
+  // FIX: one shared instance instead of creating a new one in every screen.
   final yt.YoutubeExplode _yt = yt.YoutubeExplode();
 
   Future<void> _startPlayback(String videoId, String title, String author) async {
     if (_videoController != null) {
       await _videoController!.dispose();
+      _videoController = null;
     }
-    
+
     setState(() {
       _isLoadingPlayer = true;
       _isVideoPlaying = true;
@@ -54,23 +57,33 @@ class _MainLayoutState extends State<MainLayout> {
     });
 
     try {
-      var map = await _yt.videos.streamsClient.getManifest(videoId);
-      var streamInfo = map.muxed.withHighestBitrate();
-      
-      _videoController = VideoPlayerController.networkUrl(streamInfo.url)
-        ..initialize().then((_) {
-          setState(() {
-            _isLoadingPlayer = false;
-            _videoController!.play();
-          });
-        });
-    } catch (e) {
-      setState(() => _isLoadingPlayer = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Playback Error! Please try another video.')),
-        );
+      var manifest = await _yt.videos.streamsClient.getManifest(videoId);
+      final muxedStreams = manifest.muxed.toList();
+
+      // FIX: some videos have no muxed (audio+video) stream -> was crashing before.
+      if (muxedStreams.isEmpty) {
+        throw Exception('No playable stream found for this video');
       }
+
+      var streamInfo = muxedStreams.withHighestBitrate();
+
+      final controller = VideoPlayerController.networkUrl(streamInfo.url);
+      _videoController = controller;
+
+      await controller.initialize();
+
+      // FIX: mounted check after the async gap, avoids setState-after-dispose crash.
+      if (!mounted) return;
+      setState(() {
+        _isLoadingPlayer = false;
+      });
+      controller.play();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingPlayer = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Playback Error! Please try another video.')),
+      );
     }
   }
 
@@ -84,7 +97,7 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> screens = [
-      YouTubeHomeScreen(onVideoSelect: _startPlayback),
+      YouTubeHomeScreen(yt: _yt, onVideoSelect: _startPlayback),
       const Center(child: Text('Shorts Feed', style: TextStyle(color: Colors.white, fontSize: 18))),
       const Center(child: Text('Subscriptions', style: TextStyle(color: Colors.white, fontSize: 18))),
       const Center(child: Text('Library', style: TextStyle(color: Colors.white, fontSize: 18))),
@@ -96,7 +109,10 @@ class _MainLayoutState extends State<MainLayout> {
           children: [
             Icon(Icons.play_circle_filled, color: Colors.red, size: 30),
             SizedBox(width: 6),
-            Text('YouTube', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22, letterSpacing: -1)),
+            Text(
+              'YouTube',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22, letterSpacing: -1),
+            ),
             SizedBox(width: 4),
             Text('Premium', style: TextStyle(color: Colors.grey, fontSize: 12)),
           ],
@@ -120,7 +136,7 @@ class _MainLayoutState extends State<MainLayout> {
                                 aspectRatio: _videoController!.value.aspectRatio,
                                 child: VideoPlayer(_videoController!),
                               )
-                            : const Center(child: Icon(Icons.error))),
+                            : const Center(child: Icon(Icons.error, color: Colors.white))),
                   ),
                   Padding(
                     padding: const EdgeInsets.all(12.0),
@@ -131,7 +147,12 @@ class _MainLayoutState extends State<MainLayout> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(_currentVideoTitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              Text(
+                                _currentVideoTitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
                               Text(_currentChannel, style: const TextStyle(color: Colors.grey, fontSize: 12)),
                             ],
                           ),
@@ -183,8 +204,10 @@ class _MainLayoutState extends State<MainLayout> {
 }
 
 class YouTubeHomeScreen extends StatefulWidget {
+  final yt.YoutubeExplode yt;
   final Function(String, String, String) onVideoSelect;
-  const YouTubeHomeScreen({super.key, required this.onVideoSelect});
+
+  const YouTubeHomeScreen({super.key, required this.yt, required this.onVideoSelect});
 
   @override
   State<YouTubeHomeScreen> createState() => _YouTubeHomeScreenState();
@@ -192,9 +215,9 @@ class YouTubeHomeScreen extends StatefulWidget {
 
 class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
   final TextEditingController _searchController = TextEditingController();
-  final yt.YoutubeExplode _ytExplode = yt.YoutubeExplode();
   List<yt.Video> _searchedVideos = [];
   bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -204,42 +227,65 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
 
   Future<void> _loadInitialVideos() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
-      var searchResult = await _ytExplode.search.search('Sinhala new songs');
-      if (mounted) {
-        setState(() {
-          _searchedVideos = searchResult.take(10).toList();
-          _isLoading = false;
-        });
-      }
+      var searchResult = await widget.yt.search.search('Sinhala new songs');
+      if (!mounted) return;
+      setState(() {
+        _searchedVideos = searchResult.take(10).toList();
+        _isLoading = false;
+      });
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Could not load videos';
+      });
     }
   }
 
   Future<void> _searchYouTube(String query) async {
-    if (query.isEmpty) return;
+    if (query.trim().isEmpty) return;
     if (!mounted) return;
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
-      var searchResult = await _ytExplode.search.search(query);
-      if (mounted) {
-        setState(() {
-          _searchedVideos = searchResult.take(15).toList();
-          _isLoading = false;
-        });
-      }
+      var searchResult = await widget.yt.search.search(query);
+      if (!mounted) return;
+      setState(() {
+        _searchedVideos = searchResult.take(15).toList();
+        _isLoading = false;
+      });
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Search failed, try again';
+      });
     }
   }
 
   @override
   void dispose() {
+    // NOTE: _ytExplode is now owned by MainLayout, so it is NOT closed here.
     _searchController.dispose();
-    _ytExplode.close();
     super.dispose();
+  }
+
+  String _formatDuration(Duration? d) {
+    if (d == null) return '';
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60);
+    final s = d.inSeconds.remainder(60);
+    if (h > 0) {
+      return '$h:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    }
+    return '$m:${s.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -262,7 +308,13 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
           ),
         ),
         if (_isLoading) const Expanded(child: Center(child: CircularProgressIndicator(color: Colors.red))),
-        if (!_isLoading)
+        if (!_isLoading && _errorMessage != null)
+          Expanded(
+            child: Center(
+              child: Text(_errorMessage!, style: const TextStyle(color: Colors.grey)),
+            ),
+          ),
+        if (!_isLoading && _errorMessage == null)
           Expanded(
             child: ListView.builder(
               itemCount: _searchedVideos.length,
@@ -276,3 +328,69 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
                         height: 180,
                         width: double.infinity,
                         color: const Color(0xFF222222),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.network(
+                              video.thumbnails.highResUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Center(child: Icon(Icons.image_not_supported, color: Colors.grey)),
+                            ),
+                            Positioned(
+                              right: 6,
+                              bottom: 6,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                color: Colors.black87,
+                                child: Text(
+                                  _formatDuration(video.duration),
+                                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const CircleAvatar(
+                              radius: 18,
+                              backgroundColor: Color(0xFF3D3D3D),
+                              child: Icon(Icons.person, color: Colors.white, size: 18),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    video.title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    video.author,
+                                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
