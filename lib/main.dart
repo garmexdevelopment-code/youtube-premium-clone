@@ -40,7 +40,6 @@ class _MainLayoutState extends State<MainLayout> {
   String _currentVideoTitle = '';
   String _currentChannel = '';
 
-  // FIX: one shared instance instead of creating a new one in every screen.
   final yt.YoutubeExplode _yt = yt.YoutubeExplode();
 
   Future<void> _startPlayback(String videoId, String title, String author) async {
@@ -60,7 +59,6 @@ class _MainLayoutState extends State<MainLayout> {
       var manifest = await _yt.videos.streamsClient.getManifest(videoId);
       final muxedStreams = manifest.muxed.toList();
 
-      // FIX: some videos have no muxed (audio+video) stream -> was crashing before.
       if (muxedStreams.isEmpty) {
         throw Exception('No playable stream found for this video');
       }
@@ -72,7 +70,6 @@ class _MainLayoutState extends State<MainLayout> {
 
       await controller.initialize();
 
-      // FIX: mounted check after the async gap, avoids setState-after-dispose crash.
       if (!mounted) return;
       setState(() {
         _isLoadingPlayer = false;
@@ -97,7 +94,7 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> screens = [
-      YouTubeHomeScreen(yt: _yt, onVideoSelect: _startPlayback),
+      YouTubeHomeScreen(ytClient: _yt, onVideoSelect: _startPlayback),
       const Center(child: Text('Shorts Feed', style: TextStyle(color: Colors.white, fontSize: 18))),
       const Center(child: Text('Subscriptions', style: TextStyle(color: Colors.white, fontSize: 18))),
       const Center(child: Text('Library', style: TextStyle(color: Colors.white, fontSize: 18))),
@@ -204,10 +201,10 @@ class _MainLayoutState extends State<MainLayout> {
 }
 
 class YouTubeHomeScreen extends StatefulWidget {
-  final yt.YoutubeExplode yt;
+  final yt.YoutubeExplode ytClient;
   final Function(String, String, String) onVideoSelect;
 
-  const YouTubeHomeScreen({super.key, required this.yt, required this.onVideoSelect});
+  const YouTubeHomeScreen({super.key, required this.ytClient, required this.onVideoSelect});
 
   @override
   State<YouTubeHomeScreen> createState() => _YouTubeHomeScreenState();
@@ -232,7 +229,7 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
       _errorMessage = null;
     });
     try {
-      var searchResult = await widget.yt.search.search('Sinhala new songs');
+      var searchResult = await widget.ytClient.search.search('Sinhala new songs');
       if (!mounted) return;
       setState(() {
         _searchedVideos = searchResult.take(10).toList();
@@ -255,7 +252,7 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
       _errorMessage = null;
     });
     try {
-      var searchResult = await widget.yt.search.search(query);
+      var searchResult = await widget.ytClient.search.search(query);
       if (!mounted) return;
       setState(() {
         _searchedVideos = searchResult.take(15).toList();
@@ -272,7 +269,6 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
 
   @override
   void dispose() {
-    // NOTE: _ytExplode is now owned by MainLayout, so it is NOT closed here.
     _searchController.dispose();
     super.dispose();
   }
