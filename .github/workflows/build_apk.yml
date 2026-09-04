@@ -23,28 +23,30 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          flutter-version: '3.24.0' # උඹ දාපු සුපිරි Update එක
-          cache: true # බිල්ඩ් එක වේගවත් කිරීමට උඹ දාපු කෑල්ල
+          flutter-version: '3.24.0'
+          cache: true
 
       - name: Create Base Android Structure
         run: |
           flutter create --org com.garmex.ytclone --project-name youtube_premium_clone .
 
+      # සර්වර් එක ඇතුළෙන්ම පැකේජ් 2ක බලෙන්ම ඇතුළත් කිරීම (pubspec ලෙඩ සදහටම ඉවරයි)
+      - name: Force Inject Latest Stable Packages
+        run: |
+          flutter pub add youtube_explode_dart
+          flutter pub add video_player
+
       - name: Install dependencies
         run: flutter pub get
 
-      # උඹ ලියපු ලොජික් එක සහ .pub-cache එක යන දෙකම 100%ක්ම නිවැරදි කරන ක්‍රමය
-      - name: Fix Android Proguard Issue (Project & Pub-Cache)
+      - name: Fix Android Proguard Issue
         run: |
-          # 1. ඔබ ලියූ ප්‍රොජෙක්ට් එක ඇතුළේ ඇති ෆයිල් නිවැරදි කිරීම
           if [ -f android/app/build.gradle ]; then
             sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" android/app/build.gradle
           fi
           if [ -f android/app/build.gradle.kts ]; then
             sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" android/app/build.gradle.kts
           fi
-          
-          # 2. වැරැද්ද ඇති කරන බාහිර පැකේජ් (.pub-cache) එක ඇතුළේ ඇති සියල්ල ඔටෝ නිවැරදි කිරීම
           find ~/.pub-cache/ -name "build.gradle" -exec sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" {} +
 
       - name: Build APK
