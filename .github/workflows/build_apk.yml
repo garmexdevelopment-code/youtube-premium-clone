@@ -28,7 +28,6 @@ jobs:
 
       - name: Create Base Flutter Template
         run: |
-          # මෙතැනින් --force ඉවත් කර සකස් කර ඇත
           flutter create --org com.garmex.ytclone --project-name youtube_premium_clone .
 
       - name: Apply Custom Code
@@ -38,6 +37,11 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      # Google හි නවතම Android පද්ධති නීති නිසා සිදුවන බිඳවැටීම ස්වයංක්‍රීයව නිවැරදි කිරීමේ පියවර
+      - name: Fix Android Proguard Issue
+        run: |
+          find ~/.pub-cache/ -name "build.gradle" -exec sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" {} +
 
       - name: Build APK
         run: flutter build apk --release
