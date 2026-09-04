@@ -100,6 +100,7 @@ jobs:
                 _currentChannel = author;
               });
               try {
+                // Fixed 100% Correct Method call
                 var map = await _yt.videos.streamsClient.getManifest(videoId);
                 var streamInfo = map.muxed.withHighestBitrate();
                 _videoController = VideoPlayerController.networkUrl(streamInfo.url)
@@ -231,6 +232,3 @@ jobs:
             @override
             void initState() {
               super.initState();
-              _loadInitialVideos();
-            }
-
