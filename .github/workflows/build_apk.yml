@@ -21,15 +21,12 @@ jobs:
         with:
           channel: 'stable'
 
-      # 1. පරණ වැරදි දත්ත සියල්ලම මඟහැර සර්වර් එක ඇතුළෙන්ම අලුත්ම පිරිසිදු ඇප් එකක් ඔටෝ සෑදීම
       - name: Generate Fresh App Template
         run: |
           flutter create --org com.garmex.ytclone --project-name youtube_premium_clone fresh_app
 
-      # 2. වැඩ කරන නිවැරදි කෝඩ් එක කෙලින්ම සර්වර් එක ඇතුළෙන්ම ලියවීම (Cache ප්‍රශ්න සදහටම ඉවරයි)
       - name: Inject Guaranteed Working Code Files
         run: |
-          # 100% නිවැරදි pubspec.yaml එක ලිවීම
           cat << 'EOF' > fresh_app/pubspec.yaml
           name: youtube_premium_clone
           description: Guaranteed Working YouTube Premium Clone App.
@@ -50,7 +47,6 @@ jobs:
             uses-material-design: true
           EOF
 
-          # 100% නිවැරදි main.dart එක ලිවීම
           cat << 'EOF' > fresh_app/lib/main.dart
           import 'package:flutter/material.dart';
           import 'package:youtube_explode_dart/youtube_explode_dart.dart' as yt;
@@ -104,7 +100,7 @@ jobs:
                 _currentChannel = author;
               });
               try {
-                var map = await _yt.getManifest(videoId);
+                var map = await _yt.videos.streamsClient.getManifest(videoId);
                 var streamInfo = map.muxed.withHighestBitrate();
                 _videoController = VideoPlayerController.networkUrl(streamInfo.url)
                   ..initialize().then((_) {
@@ -228,3 +224,13 @@ jobs:
 
           class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
             final TextEditingController _searchController = TextEditingController();
+            final yt.YoutubeExplode _ytExplode = yt.YoutubeExplode();
+            List<yt.Video> _searchedVideos = [];
+            bool _isLoading = false;
+
+            @override
+            void initState() {
+              super.initState();
+              _loadInitialVideos();
+            }
+
