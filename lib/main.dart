@@ -38,16 +38,12 @@ class _MainLayoutState extends State<MainLayout> {
   bool _isVideoPlaying = false;
   String _currentVideoTitle = '';
   String _currentChannel = '';
-  
-  bool _isLoggedIn = false;
-  String _secureUserEmail = '';
 
   final yt.YoutubeExplode _yt = yt.YoutubeExplode();
 
   void _startPlayback(String videoId, String title, String author) {
-    if (_videoController != null) {
-      _videoController!.dispose();
-    }
+    _videoController?.dispose();
+
     setState(() {
       _currentVideoTitle = title;
       _currentChannel = author;
@@ -63,64 +59,6 @@ class _MainLayoutState extends State<MainLayout> {
     });
   }
 
-  void _showSecureGoogleLogin() {
-    TextEditingController emailController = TextEditingController();
-    TextEditingController passwordController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF212121),
-        title: const Row(
-          children: [
-            Icon(Icons.security, color: Colors.greenAccent, size: 24),
-            SizedBox(width: 8),
-            Text('Secure Google Sign-In', style: TextStyle(color: Colors.white, fontSize: 18)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Your credentials are encrypted and sent directly to Google. Developers cannot access your data.', style: TextStyle(color: Colors.grey, fontSize: 11)),
-            const SizedBox(height: 10),
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(hintText: 'example@gmail.com', labelText: 'Gmail Address'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(hintText: 'Enter Password', labelText: 'Password'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context), 
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey))
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
-            onPressed: () {
-              if (emailController.text.contains('@gmail.com')) {
-                setState(() {
-                  _isLoggedIn = true;
-                  _secureUserEmail = emailController.text;
-                });
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Securely connected as: $_secureUserEmail')));
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid Gmail address.')));
-              }
-            },
-            child: const Text('Secure Login', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   void dispose() {
     _videoController?.dispose();
@@ -131,7 +69,7 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> screens = [
-      YouTubeHomeScreen(onVideoSelect: _startPlayback),
+      YouTubeHomeScreen(ytClient: _yt, onVideoSelect: _startPlayback),
       const Center(child: Text('Shorts Feed (Ad-Free)', style: TextStyle(color: Colors.white, fontSize: 18))),
       const Center(child: Text('Subscriptions Panel', style: TextStyle(color: Colors.white, fontSize: 18))),
       const Center(child: Text('Library & Downloads', style: TextStyle(color: Colors.white, fontSize: 18))),
@@ -148,17 +86,6 @@ class _MainLayoutState extends State<MainLayout> {
         ),
         actions: [
           IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-          GestureDetector(
-            onTap: _isLoggedIn ? null : _showSecureGoogleLogin,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 14.0, left: 6.0),
-              child: CircleAvatar(
-                backgroundColor: _isLoggedIn ? Colors.green : Colors.blueAccent,
-                radius: 14,
-                child: Text(_isLoggedIn ? _secureUserEmail.substring(0, 1).toUpperCase() : 'L', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ),
         ],
       ),
       body: Column(
@@ -221,8 +148,10 @@ class _MainLayoutState extends State<MainLayout> {
 }
 
 class YouTubeHomeScreen extends StatefulWidget {
+  final yt.YoutubeExplode ytClient;
   final Function(String, String, String) onVideoSelect;
-  const YouTubeHomeScreen({super.key, required this.onVideoSelect});
+
+  const YouTubeHomeScreen({super.key, required this.ytClient, required this.onVideoSelect});
 
   @override
   State<YouTubeHomeScreen> createState() => _YouTubeHomeScreenState();
@@ -230,9 +159,9 @@ class YouTubeHomeScreen extends StatefulWidget {
 
 class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
   final TextEditingController _searchController = TextEditingController();
-  final yt.YoutubeExplode _ytExplode = yt.YoutubeExplode();
   List<yt.Video> _searchedVideos = [];
   bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -242,41 +171,64 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
 
   Future<void> _loadInitialVideos() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
-      var searchResult = await _ytExplode.search.search('Sinhala new songs');
-      if (mounted) {
-        setState(() {
-          _searchedVideos = searchResult.take(10).toList();
-          _isLoading = false;
-        });
-      }
+      var searchResult = await widget.ytClient.search.search('Sinhala new songs');
+      if (!mounted) return;
+      setState(() {
+        _searchedVideos = searchResult.take(10).toList();
+        _isLoading = false;
+      });
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Could not load videos';
+      });
     }
   }
 
   Future<void> _searchYouTube(String query) async {
-    if (query.isEmpty) return;
-    setState(() => _isLoading = true);
+    if (query.trim().isEmpty) return;
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
-      var searchResult = await _ytExplode.search.search(query);
-      if (mounted) {
-        setState(() {
-          _searchedVideos = searchResult.take(15).toList();
-          _isLoading = false;
-        });
-      }
+      var searchResult = await widget.ytClient.search.search(query);
+      if (!mounted) return;
+      setState(() {
+        _searchedVideos = searchResult.take(15).toList();
+        _isLoading = false;
+      });
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Search failed, try again';
+      });
     }
   }
 
   @override
   void dispose() {
     _searchController.dispose();
-    _ytExplode.close();
     super.dispose();
+  }
+
+  String _formatDuration(Duration? d) {
+    if (d == null) return '';
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60);
+    final s = d.inSeconds.remainder(60);
+    if (h > 0) {
+      return '$h:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    }
+    return '$m:${s.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -285,3 +237,103 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.all(10.0),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search YouTube Videos...',
+              prefixIcon: const Icon(Icons.search),
+              filled: true,
+              fillColor: const Color(0xFF272727),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(25.0), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(vertical: 0),
+            ),
+            onSubmitted: _searchYouTube,
+          ),
+        ),
+        if (_isLoading) const Expanded(child: Center(child: CircularProgressIndicator(color: Colors.red))),
+        if (!_isLoading && _errorMessage != null)
+          Expanded(
+            child: Center(
+              child: Text(_errorMessage!, style: const TextStyle(color: Colors.grey)),
+            ),
+          ),
+        if (!_isLoading && _errorMessage == null)
+          Expanded(
+            child: ListView.builder(
+              itemCount: _searchedVideos.length,
+              itemBuilder: (context, index) {
+                final video = _searchedVideos[index];
+                return InkWell(
+                  onTap: () => widget.onVideoSelect(video.id.value, video.title, video.author),
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 180,
+                        width: double.infinity,
+                        color: const Color(0xFF222222),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.network(
+                              video.thumbnails.highResUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Center(child: Icon(Icons.image_not_supported, color: Colors.grey)),
+                            ),
+                            Positioned(
+                              right: 6,
+                              bottom: 6,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                color: Colors.black87,
+                                child: Text(
+                                  _formatDuration(video.duration),
+                                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const CircleAvatar(
+                              radius: 18,
+                              backgroundColor: Color(0xFF3D3D3D),
+                              child: Icon(Icons.person, color: Colors.white, size: 18),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    video.title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    video.author,
+                                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
