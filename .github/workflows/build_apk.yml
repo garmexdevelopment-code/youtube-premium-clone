@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -23,211 +26,28 @@ jobs:
           flutter-version: '3.24.0'
           cache: true
 
-      - name: Generate Fresh App Template
+      - name: Create Base Android Structure
         run: |
-          flutter create --org com.garmex.ytclone --project-name youtube_premium_clone fresh_app
+          flutter create --org com.garmex.ytclone --project-name youtube_premium_clone .
 
-      - name: Inject Secure YMusic App Code
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Fix Android Proguard and Kotlin Issue
         run: |
-          # 1. 100% ආරක්ෂිත සහ යාවත්කාලීන කරන ලද pubspec.yaml එක ලිවීම
-          cat << 'EOF' > fresh_app/pubspec.yaml
-          name: youtube_premium_clone
-          description: 100% Secure YMusic Clone App.
-          publish_to: 'none'
-          version: 1.0.0+1
-          environment:
-            sdk: '>=3.0.0 <4.0.0'
-          dependencies:
-            flutter:
-              sdk: flutter
-            youtube_explode_dart: ^2.5.3
-            youtube_player_flutter: ^9.1.1
-          dev_dependencies:
-            flutter_test:
-              sdk: flutter
-            flutter_lints: ^3.0.2
-          flutter:
-            uses-material-design: true
-          EOF
+          if [ -f android/app/build.gradle ]; then
+            sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" android/app/build.gradle
+          fi
+          if [ -f android/settings.gradle ]; then
+            sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.20"/g' android/settings.gradle
+          fi
+          find ~/.pub-cache/ -name "build.gradle" -exec sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" {} +
 
-          # 2. 100% ආරක්ෂිත Google Login, Background Play සහ Video සහිත main.dart එක ලිවීම
-          cat << 'EOF' > fresh_app/lib/main.dart
-          import 'package:flutter/material.dart';
-          import 'package:youtube_explode_dart/youtube_explode_dart.dart' as yt;
-          import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+      - name: Build APK
+        run: flutter build apk --release
 
-          void main() => runApp(const YouTubePremiumClone());
-
-          class YouTubePremiumClone extends StatelessWidget {
-            const YouTubePremiumClone({super.key});
-            @override
-            Widget build(BuildContext context) {
-              return MaterialApp(
-                debugShowCheckedModeBanner: false,
-                theme: ThemeData.dark().copyWith(
-                  scaffoldBackgroundColor: const Color(0xFF0F0F0F),
-                  appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF0F0F0F), elevation: 0),
-                  bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-                    backgroundColor: Color(0xFF0F0F0F),
-                    selectedItemColor: Colors.white,
-                    unselectedItemColor: Colors.grey,
-                  ),
-                ),
-                home: const MainLayout(),
-              );
-            }
-          }
-
-          class MainLayout extends StatefulWidget {
-            const MainLayout({super.key});
-            @override
-            State<MainLayout> createState() => _MainLayoutState();
-          }
-
-          class _MainLayoutState extends State<MainLayout> {
-            int _selectedIndex = 0;
-            YoutubePlayerController? _videoController;
-            bool _isVideoPlaying = false;
-            String _currentVideoTitle = '';
-            String _currentChannel = '';
-            
-            // Secure Login States
-            bool _isLoggedIn = false;
-            String _secureUserEmail = '';
-
-            final yt.YoutubeExplode _yt = yt.YoutubeExplode();
-
-            void _startPlayback(String videoId, String title, String author) {
-              if (_videoController != null) {
-                _videoController!.dispose();
-              }
-              setState(() {
-                _currentVideoTitle = title;
-                _currentChannel = author;
-                _isVideoPlaying = true;
-                _videoController = YoutubePlayerController(
-                  initialVideoId: videoId,
-                  flags: const YoutubePlayerFlags(
-                    autoPlay: true,
-                    mute: false,
-                    isLive: false,
-                  ),
-                );
-              });
-            }
-
-            // 100% Encrypted Safe Login UI Dialog (Data goes ONLY to Google Server)
-            void _showSecureGoogleLogin() {
-              TextEditingController emailController = TextEditingController();
-              TextEditingController passwordController = TextEditingController();
-
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  backgroundColor: const Color(0xFF212121),
-                  title: Row(
-                    children: [
-                      const Icon(Icons.security, color: Colors.greenAccent, size: 24),
-                      const SizedBox(width: 8),
-                      const Text('Secure Google Sign-In', style: TextStyle(color: Colors.white, fontSize: 18)),
-                    ],
-                  ),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Your credentials are encrypted and sent directly to Google. Developers cannot access your data.', style: TextStyle(color: Colors.grey, fontSize: 11)),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: emailController,
-                        decoration: const InputDecoration(hintText: 'example@gmail.com', labelText: 'Gmail Address'),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(hintText: 'Enter Password', labelText: 'Password'),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.grey))),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
-                      onPressed: () {
-                        if (emailController.text.contains('@gmail.com') && emailController.text.length > 5) {
-                          setState(() {
-                            _isLoggedIn = true;
-                            _secureUserEmail = emailController.text;
-                          });
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Securely connected as: $_secureUserEmail')));
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid Gmail address.')));
-                        }
-                      },
-                      child: const Text('Secure Login', style: TextStyle(color: Colors.white)),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            @override
-            void dispose() {
-              _videoController?.dispose();
-              super.dispose();
-            }
-
-            @override
-            Widget build(BuildContext context) {
-              final List<Widget> screens = [
-                YouTubeHomeScreen(onVideoSelect: _startPlayback),
-                const Center(child: Text('Shorts Feed (Ad-Free)', style: TextStyle(color: Colors.white, fontSize: 18))),
-                const Center(child: Text('Subscriptions Panel', style: TextStyle(color: Colors.white, fontSize: 18))),
-                const Center(child: Text('Library & Downloads', style: TextStyle(color: Colors.white, fontSize: 18))),
-              ];
-              return Scaffold(
-                appBar: AppBar(
-                  title: const Row(
-                    children: [
-                      Icon(Icons.play_circle_filled, color: Colors.red, size: 30),
-                      SizedBox(width: 6),
-                      Text('YouTube Premium', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-                    ],
-                  ),
-                  actions: [
-                    IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-                    GestureDetector(
-                      onTap: _isLoggedIn ? null : _showSecureGoogleLogin,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 14.0, left: 6.0),
-                        child: CircleAvatar(
-                          backgroundColor: _isLoggedIn ? Colors.green : Colors.blueAccent,
-                          radius: 14,
-                          child: Text(_isLoggedIn ? _secureUserEmail.substring(0, 1).toUpperCase() : 'L', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                body: Column(
-                  children: [
-                    if (_isVideoPlaying && _videoController != null)
-                      Container(
-                        color: const Color(0xFF1A1A1A),
-                        child: Column(
-                          children: [
-                            YoutubePlayer(
-                              controller: _videoController!,
-                              showVideoProgressIndicator: true,
-                              progressIndicatorColor: Colors.red,
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: youtube-premium-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
