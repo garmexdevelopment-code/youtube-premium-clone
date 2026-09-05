@@ -1,5 +1,5 @@
 name: youtube_premium_clone
-description: Working YouTube Premium Clone App.
+description: "A YouTube Premium clone app built with Flutter."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,8 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  youtube_explode_dart: ^2.5.3
-  youtube_player_flutter: ^9.1.1
+
+  cupertino_icons: ^1.0.6
+  youtube_explode_dart: ^3.1.0
+  youtube_player_flutter: ^9.0.3
 
 dev_dependencies:
   flutter_test:
