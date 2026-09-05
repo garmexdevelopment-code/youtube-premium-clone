@@ -96,8 +96,10 @@ class _MainLayoutState extends State<MainLayout> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.grey))),
-          Navigator.pop(context),
+          TextButton(
+            onPressed: () => Navigator.pop(context), 
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey))
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
             onPressed: () {
@@ -122,6 +124,7 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   void dispose() {
     _videoController?.dispose();
+    _yt.close();
     super.dispose();
   }
 
@@ -220,6 +223,7 @@ class _MainLayoutState extends State<MainLayout> {
 class YouTubeHomeScreen extends StatefulWidget {
   final Function(String, String, String) onVideoSelect;
   const YouTubeHomeScreen({super.key, required this.onVideoSelect});
+
   @override
   State<YouTubeHomeScreen> createState() => _YouTubeHomeScreenState();
 }
@@ -281,4 +285,3 @@ class _YouTubeHomeScreenState extends State<YouTubeHomeScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.all(10.0),
-          child: TextField(
