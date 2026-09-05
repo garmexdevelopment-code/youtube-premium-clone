@@ -10,42 +10,49 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. GitHub එකේ තියෙන ඔයාගේ පිරිසිදු කෝඩ් එක කෙලින්ම සර්වර් එකට ගැනීම
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      # 2. Java පද්ධතිය සකසා ගැනීම
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
+      # 3. Flutter මෘදුكاංගය අලුත්ම ස්ථාවර අනුවාදයට (Latest Stable) යාවත්කාලීන කිරීම
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
-          flutter-version: '3.24.0'
+          channel: 'stable' # මෙතැනින් පරණ 3.24 අනුවාදය ඉවත් කර අලුත්ම Stable එක ලබා ගැනීමට සකසා ඇත
           cache: true
 
+      # 4. මූලික Android ව්‍යුහය සාර්ථකව සෑදීම
       - name: Create Base Android Structure
         run: |
           flutter create --org com.garmex.ytclone --project-name youtube_premium_clone .
 
+      # 5. පැකේජ් ඉන්ස්ටෝල් කිරීම
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Fix Android Proguard and Kotlin Issue
+      # 6. Android Proguard ගැටලුව සම්පූර්ණයෙන්ම මකා දැමීම
+      - name: Fix Android Proguard Issue
         run: |
           if [ -f android/app/build.gradle ]; then
             sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" android/app/build.gradle
           fi
-          if [ -f android/settings.gradle ]; then
-            sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.20"/g' android/settings.gradle
+          if [ -f android/app/build.gradle.kts ]; then
+            sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" android/app/build.gradle.kts
           fi
           find ~/.pub-cache/ -name "build.gradle" -exec sed -i "s/proguard-android.txt/proguard-android-optimize.txt/g" {} +
 
+      # 7. APK එක නිපදවීම
       - name: Build APK
         run: flutter build apk --release
 
+      # 8. සෑදූ APK එක ඩවුන්ලෝඩ් කිරීමට ලබා දීම
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
